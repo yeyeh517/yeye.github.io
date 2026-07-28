@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>真心话大冒险转盘</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            font-family: "微软雅黑", sans-serif;
+        }
+        h1 {
+            color: #fff;
+            margin-bottom: 30px;
+        }
+        /* 转盘容器 */
+        .wheel-box {
+            position: relative;
+            width: 400px;
+            height: 400px;
+        }
+        #wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transition: transform 4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: 0 0 30px #ff6b6b;
+        }
+        /* 指针 */
+        .pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid #fff;
+            z-index: 99;
+        }
+        /* 按钮 */
+        #startBtn {
+            margin-top: 40px;
+            padding: 14px 50px;
+            font-size: 20px;
+            border: none;
+            border-radius: 50px;
+            background: #ff5252;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        #startBtn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        #startBtn:hover:not(:disabled) {
+            background: #e03c3c;
+        }
+        /* 弹窗结果 */
+        .mask {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 90%;
+        }
+        .modal h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .modal p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #555;
+        }
+        .closeBtn {
+            padding: 8px 25px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎲 真心话大冒险幸运转盘</h1>
+    <div class="wheel-box">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="400" height="400"></canvas>
+    </div>
+    <button id="startBtn">开始转动转盘</button>
+
+    <!-- 结果弹窗 -->
+    <div class="mask" id="mask">
+        <div class="modal">
+            <h3>本次结果</h3>
+            <p id="resultText"></p>
+            <button class="closeBtn" onclick="closeModal()">确定</button>
+        </div>
+    </div>
+
+<script>
+    // 转盘选项：8个分区
+    const items = [
+        {type:"真心话",text:"说出你最后一次撒谎的事情"},
+        {type:"大冒险",text:"对着窗外大喊三声我最帅/最美"},
+        {type:"真心话",text:"在场最喜欢哪一个人"},
+        {type:"大冒险",text:"做5个搞怪表情包拍照"},
+        {type:"真心话",text:"偷偷吐槽一个在场的人"},
+        {type:"大冒险",text:"模仿大猩猩走路一圈"},
+        {type:"真心话",text:"谈过几次恋爱"},
+        {type:"大冒险",text:"喝一口饮料然后憋气10秒"}
+    ];
+    const colors = ['#ff6b6b','#4ecdc4','#45b7d1','#ffe066','#ff8fab','#95e1d3','#f38181','#aa96da'];
+
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const btn = document.getElementById('startBtn');
+    const mask = document.getElementById('mask');
+    const resultText = document.getElementById('resultText');
+
+    let isRunning = false;
+    let rotateDeg = 0;
+    const singleAngle = 360 / items.length;
+
+    // 绘制转盘
+    function drawWheel(){
+        ctx.clearRect(0,0,400,400);
+        for(let i=0;i<items.length;i++){
+            const start = i * singleAngle * Math.PI / 180;
+            const end = (i+1) * singleAngle * Math.PI / 180;
+            ctx.beginPath();
+            ctx.moveTo(200,200);
+            ctx.arc(200,200,200,start,end);
+            ctx.closePath();
+            ctx.fillStyle = colors[i];
+            ctx.fill();
+            ctx.strokeStyle="#fff";
+            ctx.lineWidth=2;
+            ctx.stroke();
+
+            // 文字
+            ctx.save();
+            ctx.translate(200,200);
+            ctx.rotate(start + singleAngle/2);
+            ctx.font="bold 14px 微软雅黑";
+            ctx.fillStyle="#fff";
+            ctx.textAlign="right";
+            ctx.fillText(items[i].type,170,6);
+            ctx.restore();
+        }
+    }
+    drawWheel();
+
+    // 点击旋转
+    btn.onclick = function(){
+        if(isRunning) return;
+        isRunning = true;
+        btn.disabled = true;
+        // 随机旋转圈数
+        const addDeg = 360 * (5+Math.floor(Math.random()*6)) + Math.floor(Math.random()*360);
+        rotateDeg += addDeg;
+        canvas.style.transform = `rotate(${rotateDeg}deg)`;
+
+        // 4秒后停止计算结果
+        setTimeout(()=>{
+            isRunning = false;
+            btn.disabled = false;
+            // 计算最终停留分区
+            const finalDeg = rotateDeg % 360;
+            const index = Math.floor((360 - finalDeg) / singleAngle) % items.length;
+            const res = items[index];
+            resultText.innerText = `${res.type}：${res.text}`;
+            mask.style.display = "flex";
+        },4000);
+    }
+
+    function closeModal(){
+        mask.style.display = "none";
+    }
+</script>
+</body>
+</html>
